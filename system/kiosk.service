@@ -1,0 +1,28 @@
+[Unit]
+Description=Tableau de bord speeder-pad (kiosque)
+# Conflicts agit dans les deux sens : démarrer KlipperScreen arrête le kiosque, et inversement.
+Conflicts=KlipperScreen.service
+After=systemd-user-sessions.service plymouth-quit-wait.service
+After=dbus.socket systemd-logind.service
+Wants=dbus.socket systemd-logind.service
+ConditionPathExists=/dev/tty0
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=2
+User=pi
+SupplementaryGroups=klipperscreen
+WorkingDirectory=/home/pi/kiosk
+ExecStart=/home/pi/kiosk/start.sh
+
+UtmpIdentifier=tty7
+UtmpMode=user
+TTYPath=/dev/tty7
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+
+[Install]
+WantedBy=multi-user.target
