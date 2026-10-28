@@ -1,0 +1,7 @@
+__pycache__/
+*.log
+# Configuration et jetons propres à chaque pad : générés depuis config/*.example, jamais versionnés.
+kiosk/ha.json
+kiosk/notion.json
+kiosk/*.env
+kiosk/www/config.json

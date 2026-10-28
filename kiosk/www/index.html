@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tableau de bord</title>
+<style>
+@font-face { font-family: "Roboto"; font-weight: 300; src: url("fonts/Roboto-Light.ttf"); }
+@font-face { font-family: "Roboto"; font-weight: 400; src: url("fonts/Roboto-Regular.ttf"); }
+@font-face { font-family: "Roboto"; font-weight: 600; src: url("fonts/Roboto-SemiBold.ttf"); }
+/* Le pad n'a aucune police emoji ; unicode-range évite de charger ces 11 Mo tant qu'aucun emoji n'est affiché. */
+@font-face {
+  font-family: "Noto Color Emoji"; src: url("fonts/NotoColorEmoji.ttf");
+  unicode-range: U+1F000-1FAFF, U+2600-27BF, U+2B00-2BFF, U+23E9-23FF, U+200D, U+20E3, U+FE0F;
+}
+
+:root {
+  --bg: #0b0d11; --card: #14171d; --card-2: #1a1e26; --line: #232832;
+  --fg: #eef0f4; --muted: #8b94a5; --dim: #565e6e;
+  --accent: #6cc4ff; --high: #ff6b6b; --mid: #f5b84a; --low: #5fd08a; --magic: #c79bff; --carrot: #ff9a3c;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%; background: var(--bg); color: var(--fg); overflow: hidden;
+  font: 400 20px/1.25 "Roboto", "DejaVu Sans", sans-serif; font-variant-numeric: tabular-nums;
+  -webkit-user-select: none; user-select: none;
+}
+/* Pad monté tête en bas : dalle et tactile tournent ensemble, seul le rendu est à retourner (le tactile suit la transformation). */
+.rot180 body { transform: rotate(180deg); }
+svg.i { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+main {
+  height: 100%; padding: 18px; display: grid; gap: 14px;
+  grid-template-columns: 1fr 1.15fr; grid-template-rows: minmax(0, 1fr) 92px;
+}
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; min-width: 0; min-height: 0; }
+
+/* Colonne gauche : heure et météo */
+#now { padding: 22px 26px; display: flex; flex-direction: column; justify-content: space-between; }
+#clock { font-size: 124px; font-weight: 300; line-height: .95; letter-spacing: -.02em; }
+#date { margin-top: 8px; font-size: 26px; color: var(--muted); }
+#date::first-letter { text-transform: uppercase; }
+#weather { border-top: 1px solid var(--line); padding-top: 18px; }
+.w-now { display: flex; align-items: center; gap: 18px; }
+.w-now .i { font-size: 70px; color: var(--accent); }
+.w-temp { font-size: 68px; font-weight: 300; line-height: 1; }
+.w-desc { font-size: 22px; color: var(--muted); }
+.w-desc small { display: block; font-size: 16px; color: var(--dim); }
+.w-days { display: flex; gap: 10px; margin-top: 14px; }
+.w-day { flex: 1; display: flex; align-items: center; gap: 10px; background: var(--card-2); border-radius: 12px; padding: 10px 12px; font-size: 18px; }
+.w-day .i { font-size: 28px; color: var(--muted); }
+.w-day small { display: block; color: var(--muted); font-size: 15px; text-transform: capitalize; }
+
+/* Colonne droite : tâches */
+#tasks { padding: 20px 22px; display: flex; flex-direction: column; }
+.head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.head h2 { font-size: 15px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+.badge { font-size: 16px; font-weight: 600; color: var(--bg); background: var(--accent); border-radius: 99px; padding: 2px 12px; }
+.badge.off { background: var(--card-2); color: var(--dim); }
+#task-list { flex: 1; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.task { display: flex; align-items: center; gap: 14px; background: var(--card-2); border-radius: 12px; padding: 0 14px 0 0; min-height: 56px; overflow: hidden; }
+.task .bar { width: 5px; align-self: stretch; background: var(--dim); }
+.task .emoji { flex: none; width: 34px; text-align: center; font: 26px "Noto Color Emoji", sans-serif; }
+.task .t { flex: 1; font-size: 23px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip { font-size: 15px; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 3px 11px; white-space: nowrap; }
+.more { color: var(--muted); font-size: 17px; padding: 4px 2px; }
+.empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--muted); text-align: center; }
+.empty .i { font-size: 58px; color: var(--dim); }
+.empty b { font-size: 24px; font-weight: 400; color: var(--fg); }
+.empty span { font-size: 17px; }
+
+/* Rangée du bas : maison et imprimante */
+#home { display: flex; gap: 10px; padding: 10px; }
+.tile {
+  flex: 1; display: flex; align-items: center; gap: 12px; min-width: 0; padding: 0 14px;
+  border: 0; border-radius: 12px; background: var(--card-2); color: var(--fg);
+  font: inherit; font-size: 19px; text-align: left;
+}
+button.tile { touch-action: none; }
+button.tile:active { filter: brightness(.8); }
+button.tile:disabled { color: var(--dim); }
+.tile .i { font-size: 30px; color: var(--dim); }
+.tile.on { background: #262012; }
+.tile.on .i { color: var(--tint, var(--mid)); }
+.tile small { display: block; font-size: 15px; color: var(--muted); }
+.tile.off { color: var(--muted); justify-content: center; }
+/* Actions : imprimante, nouvelle tâche, réveil réseau */
+#actions { display: flex; gap: 10px; min-width: 0; }
+.act {
+  display: flex; align-items: center; justify-content: center; gap: 12px; min-width: 0;
+  background: var(--card); color: var(--fg); border: 1.5px solid var(--line); border-radius: 18px;
+  font: 600 22px "Roboto", sans-serif;
+}
+.act .i { font-size: 32px; flex: none; }
+.act:active { filter: brightness(.8); }
+/* Trois boutons carrés ; des deux boutons d'ajout, seul celui de la liste affichée est large et ajoute un élément. */
+#printer, #wake, #add, #shop { flex: none; width: 92px; }
+#printer { border-color: var(--accent); }
+#printer .i { font-size: 38px; color: var(--accent); }
+#printer:disabled { border-color: var(--line); }
+#printer:disabled .i { color: var(--dim); }
+#wake .i { font-size: 38px; color: var(--magic); }
+#add .i, #shop .i { font-size: 38px; }
+#add .i { color: var(--mid); }
+#shop .i { color: var(--carrot); }
+#add.active, #shop.active { flex: 1; width: auto; background: var(--accent); border-color: var(--accent); color: #04121f; }
+#add.active .i, #shop.active .i { font-size: 32px; color: inherit; }
+
+/* Saisie d'une tâche : le pad n'a pas de clavier physique */
+#modal, #task-sheet, #light-sheet { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(5, 6, 8, .85); }
+#modal.open, #task-sheet.open, #light-sheet.open { display: flex; }
+.sheet.narrow { width: 560px; }
+.task:active { background: #222834; }
+.task.plain:active { background: var(--card-2); }
+#sheet-title { padding: 4px 6px 0; font-size: 28px; overflow-wrap: anywhere; }
+#sheet-state { padding: 0 6px; font-size: 16px; color: var(--muted); }
+#sheet-actions { display: flex; flex-direction: column; gap: 8px; }
+.pick { height: 66px; border: 1px solid var(--line); border-radius: 12px; background: var(--card-2); color: var(--fg); font: 600 24px "Roboto", sans-serif; }
+.pick:active { filter: brightness(.8); }
+.pick.primary { background: var(--accent); border-color: var(--accent); color: #04121f; }
+.pick.ghost { background: transparent; color: var(--muted); }
+
+/* Réglage d'une lumière (appui long sur sa tuile) */
+.stack { display: flex; flex-direction: column; gap: 8px; }
+#light-name { padding: 4px 6px 0; font-size: 28px; }
+.group { padding: 4px 6px 0; font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.swatches, .whites, .levels { display: flex; gap: 8px; }
+.swatch { flex: 1; height: 60px; border: 0; border-radius: 14px; }
+.white { flex: 1; height: 54px; border: 0; border-radius: 14px; color: #1a1408; font: 600 20px "Roboto", sans-serif; }
+.level { flex: 1; height: 54px; border: 1px solid var(--line); border-radius: 12px; background: var(--card-2); color: var(--fg); font: 600 20px "Roboto", sans-serif; }
+.swatch:active, .white:active, .level:active { filter: brightness(.75); }
+.sheet { width: 960px; max-width: 100%; display: flex; flex-direction: column; gap: 10px; padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; }
+#draft { display: flex; align-items: center; min-height: 62px; padding: 0 18px; overflow: hidden; white-space: pre; font-size: 30px; background: var(--card-2); border-radius: 12px; }
+#draft .ph { color: var(--dim); }
+.caret { width: 2px; height: 34px; margin-left: 2px; background: var(--accent); }
+#modal-msg, #sheet-msg { min-height: 22px; font-size: 17px; color: var(--mid); }
+#keys { display: flex; flex-direction: column; gap: 6px; }
+.krow { display: flex; gap: 6px; justify-content: center; }
+.key {
+  flex: 1; max-width: 76px; height: 50px; display: flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 10px; background: var(--card-2); color: var(--fg); font: 400 24px "Roboto", sans-serif;
+}
+.key:active { background: #2a303c; }
+.key .i { font-size: 26px; }
+.key.wide { flex: 2; max-width: none; font-size: 20px; font-weight: 600; }
+.key.back { flex: none; width: 118px; max-width: none; }
+.key.space { flex: 5; max-width: none; font-size: 18px; color: var(--muted); }
+.key.ghost { background: transparent; border: 1px solid var(--line); }
+.key.ok { background: var(--accent); color: #04121f; }
+
+#toast {
+  position: fixed; left: 50%; bottom: 118px; transform: translateX(-50%); padding: 12px 22px;
+  background: var(--card-2); border: 1px solid var(--line); border-radius: 99px; font-size: 19px;
+  opacity: 0; pointer-events: none;
+}
+#toast.show { opacity: 1; }
+</style>
+<script>
+  // Synchrone, avant le premier rendu : évite un flash à l'endroit.
+  if (new URLSearchParams(location.search).get("rotate") === "180") document.documentElement.classList.add("rot180");
+</script>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-partly" viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><path d="M8 1.5V3M1.5 8H3M3.4 3.4l1 1M12.6 3.4l-1 1M9 21a4 4 0 0 1-.4-8 5 5 0 0 1 9.6 1.2A3.4 3.4 0 0 1 17.5 21H9z"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 19a4.5 4.5 0 1 1 1.2-8.8A6 6 0 0 1 19.5 12.5 3.3 3.3 0 0 1 18 19H7z"/></symbol>
+  <symbol id="i-rain" viewBox="0 0 24 24"><path d="M7 15a4.5 4.5 0 1 1 1.2-8.8A6 6 0 0 1 19.5 8.5 3.3 3.3 0 0 1 18 15H7zM8 18l-1 3M12 18l-1 3M16 18l-1 3"/></symbol>
+  <symbol id="i-snow" viewBox="0 0 24 24"><path d="M7 15a4.5 4.5 0 1 1 1.2-8.8A6 6 0 0 1 19.5 8.5 3.3 3.3 0 0 1 18 15H7zM8 18.5v.01M12 20.5v.01M16 18.5v.01"/></symbol>
+  <symbol id="i-storm" viewBox="0 0 24 24"><path d="M7 15a4.5 4.5 0 1 1 1.2-8.8A6 6 0 0 1 19.5 8.5 3.3 3.3 0 0 1 18 15H7zM12 14l-3 4h4l-2 4"/></symbol>
+  <symbol id="i-fog" viewBox="0 0 24 24"><path d="M4 8h16M3 12h18M6 16h12M9 20h6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-door" viewBox="0 0 24 24"><path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M4 21h16M14 12v.01"/></symbol>
+  <symbol id="i-thermo" viewBox="0 0 24 24"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 9.5V20h14V9.5"/></symbol>
+  <symbol id="i-printer" viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2M7 14h10v7H7z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-wand" viewBox="0 0 24 24"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72M14 7l3 3M5 6v4M19 14v4M10 2v2M7 8H3M21 16h-4M11 3H9"/></symbol>
+  <symbol id="i-carrot" viewBox="0 0 24 24"><path d="M2.27 21.7s9.87-3.5 12.73-6.36a4.5 4.5 0 0 0-6.36-6.37C5.77 11.84 2.27 21.7 2.27 21.7zM8.64 14l-2.05-2.04M15.34 15l-2.46-2.46"/><path d="M22 9s-1.33-2-3.5-2C16.86 7 15 9 15 9s1.33 2 3.5 2S22 9 22 9z"/><path d="M15 2s-2 1.33-2 3.5S15 9 15 9s2-1.84 2-3.5C17 3.33 15 2 15 2z"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3zM15 3v6h6"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+  <symbol id="i-backspace" viewBox="0 0 24 24"><path d="M20 5H9l-7 7 7 7h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zM18 9l-6 6M12 9l6 6"/></symbol>
+</svg>
+
+<main>
+  <section id="now" class="card">
+    <div>
+      <div id="clock">--:--</div>
+      <div id="date">&nbsp;</div>
+    </div>
+    <div id="weather"></div>
+  </section>
+
+  <section id="tasks" class="card">
+    <div class="head"><h2 id="panel-title">Aujourd'hui</h2><span id="count" class="badge off">–</span></div>
+    <div id="task-list"></div>
+  </section>
+
+  <section id="home" class="card"></section>
+
+  <div id="actions">
+    <button id="printer" class="act" type="button" aria-label="Imprimante (KlipperScreen)"><svg class="i"><use href="#i-printer"/></svg></button>
+    <button id="add" class="act" type="button"></button>
+    <button id="shop" class="act" type="button"></button>
+    <button id="wake" class="act" type="button" aria-label="Réveiller une machine"><svg class="i"><use href="#i-wand"/></svg></button>
+  </div>
+</main>
+
+<div id="modal">
+  <div class="sheet">
+    <div id="draft"></div>
+    <div id="modal-msg"></div>
+    <div id="keys"></div>
+  </div>
+</div>
+<div id="task-sheet">
+  <div class="sheet narrow">
+    <div id="sheet-title"></div>
+    <div id="sheet-state"></div>
+    <div id="sheet-msg"></div>
+    <div id="sheet-actions"></div>
+  </div>
+</div>
+<div id="light-sheet">
+  <div class="sheet narrow">
+    <div id="light-name"></div>
+    <div id="light-body" class="stack"></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+const DEMO = new URLSearchParams(location.search).has("demo");
+// Jamais de menu contextuel natif : l'appui long du pad le déclenche, et il doit rester sous le contrôle de la page.
+document.addEventListener("contextmenu", (event) => event.preventDefault());
+
+const WMO = [
+  [[0], "Dégagé", "sun"], [[1, 2], "Peu nuageux", "partly"], [[3], "Couvert", "cloud"],
+  [[45, 48], "Brouillard", "fog"], [[51, 53, 55, 56, 57], "Bruine", "rain"],
+  [[61, 63, 65, 66, 67, 80, 81, 82], "Pluie", "rain"], [[71, 73, 75, 77, 85, 86], "Neige", "snow"],
+  [[95, 96, 99], "Orage", "storm"],
+];
+const wmo = (code) => {
+  const hit = WMO.find(([codes]) => codes.includes(code));
+  return { label: hit ? hit[1] : "—", icon: hit ? hit[2] : "cloud" };
+};
+
+function el(tag, className, ...children) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  node.append(...children);
+  return node;
+}
+function icon(name) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "i");
+  const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+  use.setAttribute("href", "#i-" + name);
+  svg.append(use);
+  return svg;
+}
+
+/* Le fuseau du système du pad peut être faux (il était en EDT) : config.json fait foi pour l'affichage. */
+const configPromise = DEMO
+  ? Promise.resolve({})
+  : fetch("config.json").then((response) => response.json()).catch(() => ({}));
+let timeZone;
+
+const clock = document.getElementById("clock");
+const dateEl = document.getElementById("date");
+function tick() {
+  const now = new Date();
+  clock.textContent = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone });
+  dateEl.textContent = now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone });
+}
+tick();
+setInterval(tick, 10_000);
+configPromise.then((config) => { timeZone = config.timezone; tick(); });
+
+/* Météo */
+function demoWeather() {
+  const day = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+  return {
+    current: { temperature_2m: 14.2, weather_code: 2 },
+    daily: { time: [day(0), day(1), day(2)], weather_code: [2, 61, 3],
+             temperature_2m_max: [16, 13, 12], temperature_2m_min: [9, 8, 7] },
+  };
+}
+function renderWeather(data, label) {
+  const now = wmo(data.current.weather_code);
+  const days = data.daily.time.slice(1).map((iso, i) => {
+    const d = wmo(data.daily.weather_code[i + 1]);
+    const name = new Date(iso + "T12:00").toLocaleDateString("fr-FR", { weekday: "short" });
+    return el("div", "w-day", icon(d.icon), el("div", "",
+      el("small", "", name),
+      Math.round(data.daily.temperature_2m_min[i + 1]) + "° / " + Math.round(data.daily.temperature_2m_max[i + 1]) + "°"));
+  });
+  document.getElementById("weather").replaceChildren(
+    el("div", "w-now", icon(now.icon), el("div", "w-temp", Math.round(data.current.temperature_2m) + "°"),
+       el("div", "w-desc", now.label, ...(label ? [el("small", "", label)] : []))),
+    el("div", "w-days", ...days));
+}
+function weatherNote(text) {
+  document.getElementById("weather").replaceChildren(el("div", "w-now", icon("cloud"), el("div", "w-desc", text)));
+}
+async function loadWeather() {
+  if (DEMO) return renderWeather(demoWeather(), "Ville");
+  try {
+    const { weather } = await configPromise;
+    if (weather.lat == null || weather.lon == null) return weatherNote("Position à renseigner dans config.json");
+    const url = "https://api.open-meteo.com/v1/forecast?latitude=" + weather.lat + "&longitude=" + weather.lon +
+      "&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min" +
+      "&timezone=auto&forecast_days=3";
+    renderWeather(await (await fetch(url)).json(), weather.label);
+  } catch (error) {
+    weatherNote("Météo indisponible");
+  }
+}
+loadWeather();
+setInterval(loadWeather, 30 * 60_000);
+
+/* Tâches : /api/tasks sera servi par le service Notion, absent pour l'instant */
+const PRIORITY_COLOR = { "Élevée": "var(--high)", "Moyenne": "var(--mid)", "Faible": "var(--low)" };
+const MAX_TASKS = 6;
+let taskActions = [];
+const DEMO_ACTIONS = [
+  { label: "En cours", state: "En cours", title: "Passer en cours" },
+  { label: "Terminé", state: "Terminé", title: "Terminée", primary: true },
+  { label: "À faire", state: "Pas commencé", title: "Remettre à faire" },
+];
+const DEMO_TASKS = [
+  { emoji: "🚰", title: "Relancer le devis plomberie", priority: "Élevée", state: "En cours" },
+  { emoji: "💾", title: "Sauvegarde mensuelle du coffre", priority: "Moyenne", state: "À faire" },
+  { title: "Relecture du contrat fournisseur", priority: "Élevée", state: "Review" },
+  { title: "Commander les filaments PETG", priority: "Faible", state: "À faire" },
+  { title: "Mettre à jour le serveur", priority: "Moyenne", state: "À faire" },
+  { title: "Préparer la réunion du jeudi", priority: "Faible", state: "À faire" },
+  { title: "Ranger l'atelier", priority: "Faible", state: "À faire" },
+];
+function emptyState(iconName, title, hint) {
+  return el("div", "empty", icon(iconName), el("b", "", title), el("span", "", hint));
+}
+/* Le panneau de droite montre soit les tâches du jour, soit la liste de courses ; chaque liste garde sa dernière vue. */
+let panelMode = "tasks";
+let tasksView = null;     // { items } ou { note: [titre, indication] }
+let shoppingView = null;
+const DEMO_SHOPPING = [
+  { emoji: "🧀", name: "Mozzarella", quantity: 2, unit: "pièce" },
+  { emoji: "🥛", name: "Lait d'avoine", quantity: null, unit: null },
+  { emoji: "🍅", name: "Tomates", quantity: 6, unit: "pièce" },
+];
+
+// Colonne d'emoji réservée seulement si au moins une ligne de la liste en a une, pour garder les titres alignés.
+function emojiSlot(item, withSlot) {
+  return withSlot ? [el("span", "emoji", item.emoji || "")] : [];
+}
+function taskRow(task, withSlot) {
+  const bar = el("div", "bar");
+  bar.style.background = PRIORITY_COLOR[task.priority] || "var(--dim)";
+  const row = el("div", "task", bar, ...emojiSlot(task, withSlot), el("div", "t", task.title), el("span", "chip", task.state));
+  row.addEventListener("click", () => openSheet(task));
+  return row;
+}
+function shoppingRow(item, withSlot) {
+  const bar = el("div", "bar");
+  bar.style.background = "var(--carrot)";
+  const unit = item.unit === "pièce" && item.quantity > 1 ? "pièces" : item.unit;
+  const amount = item.quantity == null ? "" : item.quantity + (unit ? " " + unit : "");
+  return el("div", "task plain", bar, ...emojiSlot(item, withSlot), el("div", "t", item.name),
+    ...(amount ? [el("span", "chip", amount)] : []));
+}
+function renderPanel() {
+  const shopping = panelMode === "shopping";
+  document.getElementById("panel-title").textContent = shopping ? "Courses" : "Aujourd'hui";
+  const view = shopping ? shoppingView : tasksView;
+  const list = document.getElementById("task-list");
+  const count = document.getElementById("count");
+  const items = view && view.items;
+  count.textContent = items ? String(items.length) : "–";
+  count.classList.toggle("off", !items || items.length === 0);
+  if (!view) return list.replaceChildren();
+  if (view.note) return list.replaceChildren(emptyState("cloud", ...view.note));
+  if (items.length === 0) {
+    return list.replaceChildren(shopping
+      ? emptyState("carrot", "Liste vide", "Rien à acheter pour l'instant")
+      : emptyState("check", "Rien pour aujourd'hui", "Journée libre"));
+  }
+  // La ligne « + n autres » prend la place d'un élément, sinon la liste déborde de la carte.
+  const visible = items.length > MAX_TASKS ? MAX_TASKS - 1 : items.length;
+  const withSlot = items.slice(0, visible).some((item) => item.emoji);
+  const rows = items.slice(0, visible).map((item) => (shopping ? shoppingRow : taskRow)(item, withSlot));
+  if (items.length > visible) rows.push(el("div", "more", "+ " + (items.length - visible) + " autres"));
+  list.replaceChildren(...rows);
+}
+function renderActions() {
+  const shopping = panelMode === "shopping";
+  const add = document.getElementById("add");
+  const shop = document.getElementById("shop");
+  add.classList.toggle("active", !shopping);
+  shop.classList.toggle("active", shopping);
+  add.replaceChildren(...(shopping ? [icon("note")] : [icon("plus"), el("span", "", "Tâche")]));
+  shop.replaceChildren(...(shopping ? [icon("plus"), el("span", "", "Article")] : [icon("carrot")]));
+  add.setAttribute("aria-label", shopping ? "Afficher les tâches" : "Ajouter une tâche");
+  shop.setAttribute("aria-label", shopping ? "Ajouter un article" : "Afficher la liste de courses");
+}
+function setMode(mode) {
+  panelMode = mode;
+  renderActions();
+  renderPanel();
+}
+renderActions();
+// Charge une liste Notion servie par le pad et en garde la vue ; 503 = jeton absent, pas encore branché.
+async function fetchView(url, key, notConnected) {
+  try {
+    const response = await fetch(url);
+    if (response.status === 503) return { note: ["Notion pas encore branché", notConnected] };
+    const body = await response.json();
+    if (!response.ok) return { note: ["Notion indisponible", body.error || "Nouvel essai dans 5 minutes"] };
+    return { items: body[key], actions: body.actions };
+  } catch (error) {
+    return { note: ["Notion indisponible", "Nouvel essai dans 5 minutes"] };
+  }
+}
+async function loadTasks() {
+  if (DEMO) {
+    taskActions = DEMO_ACTIONS;
+    tasksView = { items: DEMO_TASKS };
+  } else {
+    tasksView = await fetchView("api/tasks", "tasks", "Les tâches du jour apparaîtront ici");
+    if (tasksView.actions) taskActions = tasksView.actions;
+  }
+  renderPanel();
+}
+async function loadShopping() {
+  shoppingView = DEMO
+    ? { items: DEMO_SHOPPING }
+    : await fetchView("api/shopping", "items", "La liste de courses apparaîtra ici");
+  renderPanel();
+}
+loadTasks();
+loadShopping();
+setInterval(loadTasks, 30_000);
+setInterval(loadShopping, 30_000);
+
+/* Maison : tuiles Home Assistant. Le jeton et la liste des entités commandables restent sur le serveur du pad. */
+const STATE_LABELS = {
+  light: { on: "Allumée", off: "Éteinte" },
+  switch: { on: "Activé", off: "Désactivé" },
+  script: { on: "En cours", off: "Lancer" },
+  scene: { on: "Active", off: "Lancer" },
+};
+const DEMO_HOME = [
+  { entity_id: "light.salon", label: "Salon", icon: "bulb", state: "on",
+    light: { colors: true, temp: true, rgb: [255, 221, 117], brightness: 100 } },
+  { entity_id: "light.cuisine", label: "Cuisine", icon: "bulb", state: "off",
+    light: { colors: true, temp: true, rgb: null, brightness: null } },
+  { entity_id: "script.cooking", label: "Cooking", icon: "flame", state: "off" },
+];
+const CLICK_AFTER_LONG_MS = 800;
+const home = document.getElementById("home");
+
+function stateLabel(tile) {
+  if (tile.state === "unavailable" || tile.state === "unknown") return "Indisponible";
+  const domain = tile.entity_id.split(".")[0];
+  return (STATE_LABELS[domain] || {})[tile.state] || tile.state;
+}
+function renderHome(tiles) {
+  home.replaceChildren(...tiles.map((tile) => {
+    const button = el("button", "tile" + (tile.state === "on" ? " on" : ""), icon(tile.icon),
+      el("div", "", tile.label, el("small", "", stateLabel(tile))));
+    button.type = "button";
+    button.disabled = tile.state === "unavailable";
+    // La teinte de l'icône suit la couleur réelle de la lumière.
+    const rgb = tile.light && tile.light.rgb;
+    if (tile.state === "on" && rgb) button.style.setProperty("--tint", "rgb(" + rgb.join(",") + ")");
+    // Appui bref : bascule. Appui long (lumières) : feuille de réglage, sans basculer au relâchement.
+    const wasLong = tile.light ? onLongPress(button, () => openLight(tile)) : () => false;
+    button.addEventListener("click", () => { if (!wasLong()) pressTile(tile); });
+    return button;
+  }));
+}
+function onLongPress(button, action) {
+  // WebKit/GTK reconnaît lui-même l'appui long et émet « contextmenu » (relevé sur l'écran du pad) ; les événements
+  // pointer*, eux, arrivent par rafales et parfois sans « pointerdown » : un minuteur sur eux manque l'appui long.
+  let firedAt = -Infinity;
+  button.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+    firedAt = performance.now();
+    action();
+  });
+  // Un clic qui suit de près l'appui long ne doit pas basculer la lumière.
+  return () => performance.now() - firedAt < CLICK_AFTER_LONG_MS;
+}
+function homeNote(text) {
+  home.replaceChildren(el("div", "tile off", icon("home"), text));
+}
+let lastHome = "";
+function renderHomeIfChanged(tiles) {
+  const snapshot = JSON.stringify(tiles);
+  if (snapshot === lastHome) return;
+  lastHome = snapshot;
+  renderHome(tiles);
+}
+async function loadHome() {
+  if (DEMO) return renderHome(DEMO_HOME);
+  try {
+    const response = await fetch("api/home");
+    // 503 : jeton absent, Home Assistant n'est simplement pas encore branché ; le reste est une vraie panne.
+    if (response.status === 503) return homeNote("Home Assistant non connecté");
+    if (!response.ok) return homeNote("Home Assistant indisponible");
+    renderHomeIfChanged((await response.json()).tiles);
+  } catch (error) {
+    lastHome = "";
+    homeNote("Home Assistant indisponible");
+  }
+}
+async function pressTile(tile) {
+  if (DEMO) {
+    tile.state = tile.state === "on" ? "off" : "on";
+    return renderHome(DEMO_HOME);
+  }
+  try {
+    const response = await fetch("api/home/" + encodeURIComponent(tile.entity_id), { method: "POST" });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      toast("Échec : " + (body.error || "erreur " + response.status));
+    }
+  } catch (error) {
+    toast("Échec : serveur local injoignable");
+  }
+  loadHome();
+}
+loadHome();
+setInterval(loadHome, 10_000);
+
+/* Bascule vers KlipperScreen : systemd arrête ce kiosque pendant l'appel, la connexion peut tomber avant la réponse */
+const printer = document.getElementById("printer");
+printer.addEventListener("click", async () => {
+  if (DEMO) return;
+  printer.disabled = true;
+  toast("Ouverture de KlipperScreen…");
+  try { await fetch("api/klipperscreen", { method: "POST" }); } catch (error) { /* attendu */ }
+  setTimeout(() => { printer.disabled = false; }, 15_000);
+});
+
+/* Réveil réseau : le paquet magique viendra plus tard */
+const toastEl = document.getElementById("toast");
+let toastTimer;
+function toast(text) {
+  toastEl.textContent = text;
+  toastEl.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2500);
+}
+document.getElementById("wake").addEventListener("click", () => toast("Réveil réseau : pas encore configuré"));
+
+/* Nouvel élément (tâche ou article) : clavier à l'écran, vers la liste affichée au moment de l'appui. */
+const KEY_ROWS = ["1234567890", "azertyuiop", "qsdfghjklm", "wxcvbn", "éèàçùê'-"];
+const MAX_TITLE = 120;
+const modal = document.getElementById("modal");
+const draftEl = document.getElementById("draft");
+const modalMsg = document.getElementById("modal-msg");
+let draft = "";
+let modalMode = "tasks";
+const ADD_TARGETS = {
+  tasks: {
+    placeholder: "Nouvelle tâche…", url: "api/tasks", body: (title) => ({ title }), unsaved: "Tâche non enregistrée",
+    reload: () => loadTasks(), addDemo: (title) => DEMO_TASKS.unshift({ title, priority: "Moyenne", state: "À faire" }),
+  },
+  shopping: {
+    placeholder: "Nouvel article…", url: "api/shopping", body: (name) => ({ name }), unsaved: "Article non enregistré",
+    reload: () => loadShopping(), addDemo: (name) => DEMO_SHOPPING.push({ name, quantity: null, unit: null }),
+  },
+};
+
+function renderDraft() {
+  const placeholder = ADD_TARGETS[modalMode].placeholder;
+  draftEl.replaceChildren(...(draft ? [draft] : [el("span", "ph", placeholder)]), el("span", "caret"));
+}
+function typeKey(ch) {
+  if (draft.length >= MAX_TITLE || (ch === " " && (draft === "" || draft.endsWith(" ")))) return;
+  draft = draft === "" ? ch.toUpperCase() : draft + ch;
+  renderDraft();
+}
+function openModal() {
+  modalMode = panelMode;
+  draft = "";
+  modalMsg.textContent = "";
+  renderDraft();
+  modal.classList.add("open");
+}
+function closeModal() {
+  modal.classList.remove("open");
+}
+async function submitItem() {
+  const text = draft.trim();
+  if (!text) return;
+  const target = ADD_TARGETS[modalMode];
+  if (DEMO) {
+    target.addDemo(text);
+    closeModal();
+    return target.reload();
+  }
+  try {
+    const response = await fetch(target.url, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(target.body(text)),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      modalMsg.textContent = response.status === 503
+        ? "Notion pas encore branché : " + target.unsaved.toLowerCase() + "."
+        : target.unsaved + " : " + (body.error || "erreur " + response.status);
+      return;
+    }
+    closeModal();
+    target.reload();
+  } catch (error) {
+    modalMsg.textContent = target.unsaved + " : serveur local injoignable.";
+  }
+}
+function key(content, className, onPress) {
+  const button = el("button", "key " + className, content);
+  button.type = "button";
+  button.addEventListener("click", onPress);
+  return button;
+}
+const keys = document.getElementById("keys");
+KEY_ROWS.forEach((row, index) => {
+  const line = el("div", "krow", ...[...row].map((ch) => key(ch, "", () => typeKey(ch))));
+  if (index === 3) line.append(key(icon("backspace"), "back", () => { draft = draft.slice(0, -1); renderDraft(); }));
+  keys.append(line);
+});
+keys.append(el("div", "krow",
+  key("Espace", "space", () => typeKey(" ")),
+  key("Annuler", "wide ghost", closeModal),
+  key("Ajouter", "wide ok", submitItem)));
+// Le bouton de la liste affichée ajoute un élément ; l'autre bascule vers sa liste.
+document.getElementById("add").addEventListener("click", () => (panelMode === "tasks" ? openModal() : setMode("tasks")));
+document.getElementById("shop").addEventListener("click", () => (panelMode === "shopping" ? openModal() : setMode("shopping")));
+
+/* Réglage d'une lumière : couleur, blanc, luminosité */
+const COLORS = [
+  [255, 40, 40], [255, 140, 20], [255, 220, 40], [50, 220, 90],
+  [40, 220, 230], [50, 100, 255], [160, 80, 255], [255, 80, 180],
+];
+const WHITES = [
+  { name: "Chaud", kelvin: 2700, css: "rgb(255,177,110)" },
+  { name: "Neutre", kelvin: 4000, css: "rgb(255,209,163)" },
+  { name: "Froid", kelvin: 6000, css: "rgb(235,243,255)" },
+];
+const LEVELS = [25, 50, 75, 100];
+const lightSheet = document.getElementById("light-sheet");
+
+function closeLight() {
+  lightSheet.classList.remove("open");
+}
+function choice(className, content, onPress, background) {
+  const button = el("button", className, content);
+  button.type = "button";
+  if (background) button.style.background = background;
+  button.addEventListener("click", onPress);
+  return button;
+}
+function openLight(tile) {
+  const info = tile.light || {};
+  document.getElementById("light-name").textContent = tile.label;
+  const body = [];
+  if (info.colors) {
+    body.push(el("div", "group", "Couleur"), el("div", "swatches",
+      ...COLORS.map((rgb) => choice("swatch", "", () => setLight(tile, { rgb }), "rgb(" + rgb.join(",") + ")"))));
+  }
+  if (info.temp) {
+    body.push(el("div", "group", "Blanc"), el("div", "whites",
+      ...WHITES.map((white) => choice("white", white.name, () => setLight(tile, { kelvin: white.kelvin }), white.css))));
+  }
+  body.push(el("div", "group", "Luminosité"), el("div", "levels",
+    ...LEVELS.map((brightness) => choice("level", brightness + " %", () => setLight(tile, { brightness })))));
+  body.push(pick(tile.state === "on" ? "Éteindre" : "Allumer", "", () => { closeLight(); pressTile(tile); }),
+            pick("Fermer", "ghost", closeLight));
+  document.getElementById("light-body").replaceChildren(...body);
+  lightSheet.classList.add("open");
+}
+async function setLight(tile, settings) {
+  if (DEMO) {
+    tile.state = "on";
+    tile.light = { ...tile.light, rgb: settings.rgb || tile.light.rgb, brightness: settings.brightness || tile.light.brightness };
+    return renderHome(DEMO_HOME);
+  }
+  try {
+    const response = await fetch("api/home/" + encodeURIComponent(tile.entity_id) + "/light", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(settings),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      toast("Échec : " + (body.error || "erreur " + response.status));
+    }
+  } catch (error) {
+    toast("Échec : serveur local injoignable");
+  }
+  loadHome();
+}
+lightSheet.addEventListener("click", (event) => { if (event.target === lightSheet) closeLight(); });
+
+/* Feuille d'actions d'une tâche : un appui sur la ligne l'ouvre, rien n'est modifié sans second appui */
+const sheet = document.getElementById("task-sheet");
+const sheetMsg = document.getElementById("sheet-msg");
+function closeSheet() {
+  sheet.classList.remove("open");
+}
+function pick(text, className, onPress) {
+  const button = el("button", "pick " + className, text);
+  button.type = "button";
+  button.addEventListener("click", onPress);
+  return button;
+}
+function openSheet(task) {
+  document.getElementById("sheet-title").textContent = (task.emoji ? task.emoji + " " : "") + task.title;
+  document.getElementById("sheet-state").textContent = task.state;
+  sheetMsg.textContent = "";
+  const choices = taskActions
+    .filter((action) => action.label !== task.state)
+    .map((action) => pick(action.title, action.primary ? "primary" : "", () => changeState(task, action)));
+  document.getElementById("sheet-actions").replaceChildren(...choices, pick("Annuler", "ghost", closeSheet));
+  sheet.classList.add("open");
+}
+async function changeState(task, action) {
+  if (DEMO) {
+    if (action.state === "Terminé") DEMO_TASKS.splice(DEMO_TASKS.indexOf(task), 1);
+    else task.state = action.label;
+    closeSheet();
+    return loadTasks();
+  }
+  try {
+    const response = await fetch("api/tasks/" + encodeURIComponent(task.id), {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state: action.state }),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      sheetMsg.textContent = "Non modifiée : " + (body.error || "erreur " + response.status);
+      return;
+    }
+    closeSheet();
+    loadTasks();
+  } catch (error) {
+    sheetMsg.textContent = "Non modifiée : serveur local injoignable.";
+  }
+}
+sheet.addEventListener("click", (event) => { if (event.target === sheet) closeSheet(); });
+</script>
+</body>
+</html>

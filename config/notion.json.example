@@ -1,0 +1,48 @@
+{
+  "database_id": "00000000000000000000000000000000",
+  "properties": {
+    "title": "Tache",
+    "due": null,
+    "state": "État",
+    "priority": null
+  },
+  "state_type": "status",
+  "done_states": [
+    "Terminé"
+  ],
+  "active_states": [],
+  "state_labels": {
+    "Pas commencé": "À faire"
+  },
+  "state_order": [
+    "En cours",
+    "À faire"
+  ],
+  "priority_order": [],
+  "actions": [
+    {
+      "label": "En cours",
+      "state": "En cours",
+      "title": "Passer en cours"
+    },
+    {
+      "label": "Terminé",
+      "state": "Terminé",
+      "title": "Terminée",
+      "primary": true
+    },
+    {
+      "label": "À faire",
+      "state": "Pas commencé",
+      "title": "Remettre à faire"
+    }
+  ],
+  "shopping": {
+    "database_id": "00000000000000000000000000000000",
+    "properties": {
+      "name": "Objet",
+      "quantity": "Quantité",
+      "unit": "Unité"
+    }
+  }
+}

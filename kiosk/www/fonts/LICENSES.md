@@ -1,0 +1,2 @@
+- Roboto (Light, Regular, SemiBold) : Apache License 2.0, © Google.
+- Noto Color Emoji : SIL Open Font License 1.1, © Google. Embarquée parce que le pad n'a aucune police emoji.

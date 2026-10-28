@@ -1,0 +1,15 @@
+{
+  "url": "http://homeassistant.local:8123",
+  "entities": [
+    {
+      "entity_id": "light.salon",
+      "label": "Salon",
+      "icon": "bulb"
+    },
+    {
+      "entity_id": "script.cuisine",
+      "label": "Cuisine",
+      "icon": "flame"
+    }
+  ]
+}

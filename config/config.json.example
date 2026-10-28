@@ -1,0 +1,8 @@
+{
+  "timezone": "Europe/Paris",
+  "weather": {
+    "label": "Paris",
+    "lat": 48.857,
+    "lon": 2.352
+  }
+}
